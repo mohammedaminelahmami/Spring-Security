@@ -36,12 +36,11 @@ public class AuthService {
             );
             subject = authentication.getName();
             scope = authentication.getAuthorities().stream().map(auth->auth.getAuthority()).collect(Collectors.joining(" "));
-        }else if(loginRequestDTO.getGrantType().equals("refresh_token")) {
+        }else if(loginRequestDTO.getGrantType().equals("refreshToken")) {
             Jwt decodeJWT = jwtDecoder.decode(loginRequestDTO.getRefreshToken());
+            subject = decodeJWT.getSubject();
             UserDetails userDetails = userDetailsService.loadUserByUsername(subject);
             Collection<? extends GrantedAuthority> authorities = userDetails.getAuthorities();
-
-            subject = decodeJWT.getSubject();
             scope = authorities.stream().map(auth->auth.getAuthority()).collect(Collectors.joining(" "));
         }
 
