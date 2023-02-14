@@ -10,12 +10,18 @@ import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -27,36 +33,39 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
     private final RsaKeysConfig rsaKeysConfig;
+    private final PasswordEncoder passwordEncoder;
 
     private final String[] PUBLIC_ENDPOINTS = {
             "/api/v1/auth/**",
     };
 
     @Autowired
-    public SecurityConfig(RsaKeysConfig rsaKeysConfig) {
+    public SecurityConfig(RsaKeysConfig rsaKeysConfig, PasswordEncoder passwordEncoder) {
         this.rsaKeysConfig = rsaKeysConfig;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain (HttpSecurity httpSecurity) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
-                .csrf(csrf->csrf.disable())
-                .authorizeHttpRequests(auth->auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll())
-                .authorizeHttpRequests(auth->auth.anyRequest().authenticated())
-                .sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll())
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)
                 .httpBasic(Customizer.withDefaults())
                 .build();
     }
 
     @Bean
-    public InMemoryUserDetailsManager inMemoryUserDetailsManager () {
+    public UserDetailsService inMemoryUserDetailsManager() {
         return new InMemoryUserDetailsManager(
-                User.withUsername("amine").password(passwordEncoder().encode("amine0029+0")).authorities(Role.ROLE_USER.toString()).build(),
-                User.withUsername("khalid").password(passwordEncoder().encode("hicham0029+0")).authorities(Role.ROLE_USER.toString()).build(),
-                User.withUsername("hicham").password(passwordEncoder().encode("khalid0029+0")).authorities(Role.ROLE_ADMIN.toString()).build()
+                User.withUsername("amine").password(passwordEncoder.encode("amine0029+0")).authorities(Role.ROLE_USER.toString()).build(),
+                User.withUsername("khalid").password(passwordEncoder.encode("khalid0029+0")).authorities(Role.ROLE_USER.toString()).build(),
+                User.withUsername("hicham").password(passwordEncoder.encode("hicham0029+0")).authorities(Role.ROLE_ADMIN.toString()).build()
         );
     }
 
@@ -73,7 +82,10 @@ public class SecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public AuthenticationManager authenticationManager(UserDetailsService userDetailsService) {
+        var authProvider = new DaoAuthenticationProvider();
+        authProvider.setPasswordEncoder(passwordEncoder);
+        authProvider.setUserDetailsService(userDetailsService);
+        return new ProviderManager(authProvider);
     }
 }

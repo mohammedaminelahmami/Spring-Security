@@ -7,10 +7,15 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/product")
+@RequestMapping("/api/v1/")
 public class ProductController {
-    @GetMapping
+    @GetMapping("/product")
     public Map<String, Object> getProduct(){
         return Map.of("product1", "iPhone 14");
+    }
+
+    @GetMapping("/something")
+    public Map<String, Object> getSomething(){
+        return Map.of("Name", "Hicham El Haddad");
     }
 }
